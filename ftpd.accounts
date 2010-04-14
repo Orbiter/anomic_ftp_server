@@ -1,0 +1,27 @@
+# account definition
+# in AnomicFTPD we assign every users account to a group (see ftpd.groups)
+# this file has the relation between the account, group
+# and the users password
+#
+# syntax:
+# <user>=<group>,<password>
+
+# IMPORTANT!
+# IN PRODUCTION, DELETE THESE EXAMPLES AND DEFINE YOUR OWN GROUPS AND ACCOUNTS
+# TO PREVENT THAT UNWANTED CLIENTS CAN ACCESS YOUR COMPUTER
+# THROUGH THE STANDARD SETTINGS!
+
+# demo accounts for Linux and Max OS
+bob=usergroup,123password
+
+# demo accounts for Windows
+jim=windowsusergroup,456password
+
+# anonymous account, this account is used i.e. when accessed through a web browser
+# without using a password. When ftpd is started, it generates an URL that can be
+# used to access exactly this anonymous account here.
+# Since the path notion for Windows-based and Linux/Mac OS computers are different,
+# you must correct this path for Linux and Macintoshes
+# by using a different user group with a correct path. (see commented line)
+anonymous=windowsguestgroup,*
+#anonymous=guestgroup,*

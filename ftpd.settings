@@ -1,0 +1,17 @@
+# this is an automatically generated file, updated by serverAbstractSwitch and initialized by ftpd.init
+welcome=WELCOME TO THE ANOMIC FTP SERVER
+port=2121
+countsubdir=false
+unixfoldermask=777
+loglevel=2
+unixgroup=admin
+prevYearFormat=MMM dd  yyyy
+createindex=true
+unixuser=admin
+charcoding=UTF-8
+currYearFormat=MMM dd HH:mm
+unixfilemask=666
+dataport=0
+clients=*
+connections=0
+# EOF

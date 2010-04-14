@@ -1,0 +1,99 @@
+###
+### FTPD configuration file
+###
+
+# ATTENTION!
+# The ftpd applications reads this file only once and then creates a copy
+# named ftpd.settings, which will be used afterwards at any next restart
+# of the server. If you want to make changes to these initial settings here,
+# you must delete the ftpd.settings file.
+
+# welcome string, printed upon first connection attempt:
+# this string is visible to any client that connects
+# using a teminal or a ftp command-line client.
+welcome=WELCOME TO THE ANOMIC FTP SERVER
+
+# port this daemon listens to; standard ftp port is 21
+# the port 21 cannot be used when the ftpd daemon is running under an
+# unprivileged user account, port 21 can only be used when the daemon runs
+# as root or administrator
+# in any other case, a port number >=1000 must be used. 2121 is common then.
+#port=21
+port=2121
+
+# the data port for passive (PASV) transmissions: thsi port is normally
+# assigned as any free available port; however, if you want to use a specific
+# port number you can assign this port here
+# default is 0 and means 'any available port'
+dataport=0
+
+# client ip list: connections are allowed only from this list of ip's
+# if any client is allowed to connect, use * as value
+# ip numbers shall be separated by comma. No space allowed.
+clients=*
+#clients=127.0.0.1,192.168.0.1
+
+# maximum number of connections
+# if the maximum number of connections is reached, every other connection
+# attempt is blocked until another session has terminated
+# connections = 0 if an unlimited number of connections is wanted
+connections=0
+
+# loglevel
+# 0 - print connection statements and error messages only
+# 1 - print also download/upload information
+# 2 - print every command received/sent on telnet channel
+loglevel=2
+
+# if running on a unix system, user and group owner of the stored files.
+# new files will be changed in such a way that they have this access rights.
+# the change will only be applied, if the port number is <100
+unixfilemask=666
+unixfoldermask=777
+unixuser=admin
+unixgroup=admin
+
+# index file creation
+# ftpd can dynamically create a 'index.html' file, if demanded by the client
+# the index.html is only created if it does not exist and directly demanded
+# by a RETR command. After sending the file to the client, it is deleted afterwards
+# There is no index.html file shown in a LIST command, if it does not exist,
+# even if dynamically creation is switched on
+createindex=true
+
+# directory listing: date format definition
+# the following definition works pretty well for the MS IE as ftp client
+# you may try other, more precise definitions here, the syntax is according to
+# the java.text.SimpleDateFormat;
+currYearFormat=MMM dd HH:mm
+prevYearFormat=MMM dd  yyyy
+
+# utf-8 encoding of path names
+# AnomicFTPD can perform an utf-8 encoding/decoding of path names
+# This feature is usually switched on by the 'opts utf-8' command, however
+# some client prefer to call a 'opts utf8' or simply do not call the
+# opts command at all, but expect utf-8 encoded file names by default.
+# To prevent any trouble with that, one of the following codings, including
+# UTF-8 can be switched on by default. charcoding=NONE means that the server's
+# OS' default coding is used.
+# 'NONE'
+# 'UTF-8'
+# 'US-ASCII'
+# 'ISO-8859-1'
+charcoding=UTF-8
+
+# The response format for a LIST command is not described in any RFC,
+# but is usually equal to the format of the UNIX ls -l command.
+# Each line in the directory list contains also the size of a file as
+# attribute, and if the line describes a directory, then the size attribute
+# is calculated as the number of entries that the subdirectory has.
+# Therefore, LISTing a directory with many subdirectories or with some
+# subdirectories that contain many elements may last long.
+# A possible solution for this performance problem could be by not-counting the
+# elements of the subdirectories. Wether or not to count could be switched
+# by a flag. In real-life applications we learned the the result is not used
+# and the calculation is a great performance issue.
+# We use therefore a switch to shut on or off this functionality.
+# If you have an application that need the subdirectory count,
+# set countsubdir=true
+countsubdir=false

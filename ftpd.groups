@@ -1,0 +1,32 @@
+# group definition
+# in AnomicFTPD we assign every user (see ftpd.accounts) to a group
+# the group defines the home path and access rights of users that
+# are assigned to a specific group.
+# The access rights can also grant execution rights, which in general
+# enables the SITE command for users of that group.
+#
+# the syntax of the definitions here is:
+#
+# <group_name>=<'r'|'-'><'w'|'-'><'x'|'-'>','<UU>':'<DD>','<root_path>
+#
+# this defines read (r), write(x) or execution (x) rights under the
+# condition of a specific upload (UU) / download (DD) ratio (ratio not yet
+# implemented). The root path as given here appears then as '/' to the
+# client
+
+# IMPORTANT!
+# IN PRODUCTION, DELETE THESE EXAMPLES AND DEFINE YOUR OWN GROUPS AND ACCOUNTS
+# TO PREVENT THAT UNWANTED CLIENTS CAN ACCESS YOUR COMPUTER
+# THROUGH THE STANDARD SETTINGS!
+
+# general example groups
+# the next path declarations are valid for unix-based (UNIX, LINUX, Mac OS X) OS'
+# they are also valid for Mac OS8/OS9 systems
+usergroup=rw-,00:01,/
+guestgroup=r--,00:01,/pub
+
+# special example groups
+# the following path declarations are valid for DOS-bases (any Windows) systems
+# IMPORTANT: Windows-Paths must have a double-backslash (its an escape in java)
+windowsusergroup=rw-,00:01,C:\\
+windowsguestgroup=r--,00:01,C:\\pub
