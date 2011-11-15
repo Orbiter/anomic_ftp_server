@@ -41,7 +41,7 @@
 	<property name="doc"              value="doc"/>
 	<property name="dist"             value="dist"/>
 	<property name="release"          value="RELEASE"/>
-	<property name="releaseFile"      value="AnomicFTPD_v0.96_build20100311.tar.gz"/>
+	<property name="releaseFile"      value="AnomicFTPD_v0.98_build20101120.tar.gz"/>
 	<property name="parentDir"        value="AnomicFTPD"/>
 	<property name="accessRightsDir"  value="755"/>
 	<property name="accessRightsExec" value="755"/>

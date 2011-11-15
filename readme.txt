@@ -2,22 +2,23 @@ README for the FTP SERVER AnomicFTPD (C) by Michael Peter Christen
 ---------------------------------------------------------------------------
 Please visit www.anomic.de for latest changes or new documentation.
 The AnomicFTPD FTP Server comes with ABSOLUTELY NO WARRANTY!
-This is free software, and you are welcome to redistribute it
-under certain conditions; see file gpl.txt for details.
+This is free software, licensed under the LGPL 2.1
+and you are welcome to redistribute it under certain conditions;
+see file lgpl21.txt for details.
 ---------------------------------------------------------------------------
 
 This is a full-featured ftp server in java for almost any system architecture.
 
 The complete documentation can be found inside the 'Doc' subdirectory
 in this release. Start browsing the manual by opening the index.html file
-with our web browser. Please see the FAQ there if you have trouble accessing
+with your web browser. Please see the FAQ there if you have trouble accessing
 the ftp server.
 
 Startup of the FTP Server:
 
 - on Linux        : start ftpd.sh ("nohup ./ftpd.sh > /dev/null &")
 - on Windows      : double-click ftpd.bat
-- on Mac OS X     : double-click ftpd.command (alias possible!)
+- on Mac OS X     : double-click ftpd.command (alias is possible!)
 - on any other OS : set your classpath to the 'Classes' folder
                     and execute ftpd.class, while your current system path
                     must target the release directory to access the
@@ -42,5 +43,5 @@ the author for a business proposal to customize the server according to
 your needs. We provide also integration solutions if the server is about
 to be integrated into your enterprise application.
 
-Germany, Frankfurt a.M., 11.03.2010
+Germany, Frankfurt a.M., 20.11.2010
 Michael Peter Christen

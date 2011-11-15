@@ -1,42 +1,24 @@
-// ftpdPermissions.java 
-// -----------------------
-// (C) by Michael Peter Christen; mc@anomic.de
-// first published on http://www.anomic.de
-// Frankfurt, Germany, 2004
-// last major change: 26.02.2004
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// Using this software in any meaning (reading, learning, copying, compiling,
-// running) means that you agree that the Author(s) is (are) not responsible
-// for cost, loss of data or any harm that may be caused directly or indirectly
-// by usage of this softare or this documentation. The usage of this software
-// is on your own risk. The installation and usage (starting/running) of this
-// software may allow other people or application to access your computer and
-// any attached devices and is highly dependent on the configuration of the
-// software which must be done by the user of the software; the author(s) is
-// (are) also not responsible for proper configuration and usage of the
-// software, even if provoked by documentation provided together with
-// the software.
-//
-// Any changes to this file according to the GPL as documented in the file
-// gpl.txt aside this file in the shipment you received can be done to the
-// lines that follows this copyright notice here, but changes must not be
-// done inside the copyright notive above. A re-distribution must contain
-// the intact and unchanged copyright notice.
-// Contributions and changes to the program code must be marked as such.
+/**
+ *  ftpdPermissions
+ *  Copyright 2004 by Michael Peter Christen,
+ *  mc@anomic.de, Frankfurt a. M., Germany
+ *  first published 26.02.2004 on http://www.anomic.de
+ *  last major change: 29.11.2010
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *  
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with this program in the file lgpl21.txt
+ *  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /*
  ftpdPermissions documentation:
@@ -51,8 +33,11 @@
 
 package de.anomic.ftpd;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Properties;
 
 public class ftpdPermissions {
 
@@ -122,21 +107,61 @@ public class ftpdPermissions {
 			return g.substring(i + 1);
 	}
 
+	/**
+	 * get the root path from the ftpd.groups file
+	 * @param user
+	 * @return the root file path for the given user. The path has no ending "/" or "\\".
+	 */
 	public static String getRoot(final String user) {
-		final String g = getGroup(user);
-		String p = (String) groups.get(g);
-		if ((p == null) || (p.length() <= 10)) {
-			p = "/";
-		} else {
-			p = p.substring(10);
-		}
-		if ((p.length() > 3) && ((p.endsWith("/")) || (p.endsWith("\\")))) {
-			p = p.substring(0, p.length() - 1);
-		}
-		return p;
-	}
+        return getPath(user, ftpdControl.slash);
+    }
 
-	public static boolean permissionRead(final String user) {
+	/**
+	 * get the server path from the ftpd.groups file according to a given user working directory
+	 * @param user
+	 * @param userWD
+	 * @return the server file path for the given user and user working directory.
+	 */
+	public static String getPath(final String user, String userWD) {
+        final String groupname = getGroup(user);
+        String groupdef = (String) groups.get(groupname);
+        if (groupdef == null || groupdef.length() <= 10) {
+            return null;
+        }
+        String path = groupdef.substring(10);
+        if (path.startsWith("{")) {
+            if (!path.endsWith("}")) {
+                System.out.println("wrong ftpd.groups configuration: path declaration for user '" + user + "' does not end with '}'");
+                return null;
+            }
+            Properties p = new Properties();
+            try {
+                p.load(new ByteArrayInputStream(path.substring(1, path.length() - 1).getBytes()));
+            } catch (IOException e) {
+                System.out.println("wrong ftpd.groups configuration: path declaration for user '" + user + "' is not a property list: " + path);
+                return null;
+            }
+            String q = (String) p.getProperty(userWD);
+            if (q.endsWith(ftpdControl.slash) || q.endsWith(ftpdControl.backslash)) {
+                return q.substring(1);
+            } else {
+                return q;
+            }
+        } else {
+            // this does only apply for the root path
+            if (!userWD.equals(ftpdControl.slash)) {
+                System.out.println("wrong ftpd.groups configuration: path declaration for user '" + user + "' contains no symbolic link declaration other than root path");
+                return null;
+            }
+            if (path.length() > 3 &&
+                (path.endsWith(ftpdControl.slash) || path.endsWith(ftpdControl.backslash))) {
+                path = path.substring(0, path.length() - 1);
+            }
+            return path;
+        }
+    }
+
+    public static boolean permissionRead(final String user) {
 		final String g = getGroup(user);
 		final String p = (String) groups.get(g);
 		if ((p == null) || (p.length() < 1))

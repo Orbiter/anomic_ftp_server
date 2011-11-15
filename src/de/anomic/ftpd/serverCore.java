@@ -1,42 +1,24 @@
-// serverCore.java 
-// -------------------------------------------
-// (C) by Michael Peter Christen; mc@anomic.de
-// first published on http://www.anomic.de
-// Frankfurt, Germany, 2002-2004
-// last major change: 09.03.2004
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// Using this software in any meaning (reading, learning, copying, compiling,
-// running) means that you agree that the Author(s) is (are) not responsible
-// for cost, loss of data or any harm that may be caused directly or indirectly
-// by usage of this softare or this documentation. The usage of this software
-// is on your own risk. The installation and usage (starting/running) of this
-// software may allow other people or application to access your computer and
-// any attached devices and is highly dependent on the configuration of the
-// software which must be done by the user of the software; the author(s) is
-// (are) also not responsible for proper configuration and usage of the
-// software, even if provoked by documentation provided together with
-// the software.
-//
-// Any changes to this file according to the GPL as documented in the file
-// gpl.txt aside this file in the shipment you received can be done to the
-// lines that follows this copyright notice here, but changes must not be
-// done inside the copyright notive above. A re-distribution must contain
-// the intact and unchanged copyright notice.
-// Contributions and changes to the program code must be marked as such.
+/**
+ *  serverCore
+ *  Copyright 2004 by Michael Peter Christen,
+ *  mc@anomic.de, Frankfurt a. M., Germany
+ *  first published on http://www.anomic.de
+ *  last major change: 09.03.2004
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *  
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with this program in the file lgpl21.txt
+ *  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package de.anomic.ftpd;
 
@@ -78,6 +60,11 @@ public class serverCore implements Runnable {
 											// (1 hour)
 	private Class commandClass; // the command class (a serverHandler)
 	private Class[] commandInitClasses; // the init's methods arguments
+    private Hashtable loginAttempts;
+    private Hashtable loginIsWaiting;
+	private int loginfailInitialDelay;
+	private int loginfailAddDelay;
+	private int loginfailMaxAttempts;
 
 	// class initializer
 	public serverCore(final int port, final int maxSessions, final int timeout,
@@ -89,6 +76,11 @@ public class serverCore implements Runnable {
 			System.out.println("FATAL ERROR: " + e.getMessage() + " - probably root access rights needed. check port number");
 			System.exit(0);
 		}
+        this.loginAttempts = new Hashtable();
+        this.loginIsWaiting = new Hashtable();
+        this.loginfailInitialDelay = switchboard.getConfigInt("loginfailInitialDelay", 1000);
+        this.loginfailAddDelay = switchboard.getConfigInt("loginfailAddDelay", 2000);
+        this.loginfailMaxAttempts = switchboard.getConfigInt("loginfailMaxAttempts", 100);
 		try {
 			this.commandClass = Class.forName(commandClassName);
 			this.commandInitClasses = new Class[] {
@@ -126,26 +118,47 @@ public class serverCore implements Runnable {
 			System.out.println(logDate() + " " + a + " " + message);
 		}
 	}
+	
+	public int penaltyWait(InetAddress address) {
+        synchronized (this.loginIsWaiting) {
+            if (this.loginIsWaiting.containsKey(address)) return -1;
+        }
+        synchronized (this.loginAttempts) {
+            Object c = this.loginAttempts.get(address);
+            if (c == null) return 0;
+            int cc = ((Integer) c).intValue();
+            if (cc >= loginfailMaxAttempts) return -1;
+            return loginfailInitialDelay + cc * loginfailAddDelay;
+        }
+	}
 
 	// class body
 	public void run() {
 		printlog(0, "*", "server started");
 		try {
 			Thread t;
-			do {
+			listener: do {
 				// prepare for new connection
 				printlog(1, "*", "waiting for connections, "
 						+ this.sessionCounter + " sessions running, "
 						+ this.sleepingThreads.size() + " sleeping");
 				final Socket controlSocket = this.socket.accept();
 				controlSocket.setSoTimeout(this.timeout);
+				// brute-force check
+				long penaltyWait = penaltyWait(controlSocket.getInetAddress());
+				if (penaltyWait < 0) {
+				    try {controlSocket.close();} catch (final IOException e) {}
+				    printlog(0, controlSocket.getInetAddress() + "/", "rejected blocked client from connecting");
+                    continue listener;
+				}
+				
+				// start session
 				Session connection;
 				synchronized (this) {
 					try {
-						connection = new Session(controlSocket,
-								this.switchboard);
+						connection = new Session(controlSocket, this.switchboard, penaltyWait);
 					} catch (final IOException e) {
-						printlog(0, "*", "ERROR: " + e.getMessage());
+						printlog(0, controlSocket.getInetAddress() + "/", "ERROR: " + e.getMessage());
 						continue;
 					}
 				}
@@ -202,11 +215,10 @@ public class serverCore implements Runnable {
 			t = (Thread) (threadEnum.nextElement());
 			if (t.isAlive()) {
 				// check the age of the thread
-				if (System.currentTimeMillis()
-						- ((Long) this.sleepingThreads.get(t)).longValue() > this.sleeplimit) {
+				if (System.currentTimeMillis() - ((Long) this.sleepingThreads.get(t)).longValue() > this.sleeplimit) {
 					// kill the thread
 					if (this.termSleepingThreads) {
-						t.interrupt(); // hopefully this wakes him up.
+						t.interrupt(); // hopefully this wakes it up.
 					}
 					this.sleepingThreads.remove(t);
 				}
@@ -216,9 +228,8 @@ public class serverCore implements Runnable {
 			}
 		}
 
-		if ((this.sessionCounter == 0) && (this.activeThreads.size() > 0)) {
-			System.out
-					.println("ERROR at idle-test: active Thread estimation wrong ("
+		if (this.sessionCounter == 0 && this.activeThreads.size() > 0) {
+			System.out.println("ERROR at idle-test: active Thread estimation wrong ("
 							+ this.activeThreads.size() + ")");
 		}
 
@@ -240,9 +251,9 @@ public class serverCore implements Runnable {
 		public InetAddress userAddress; // the address of the client
 		public PushbackInputStream in; // on control input stream
 		public OutputStream out; // on control output stream, autoflush
+		private long penaltyWait;
 
-		public Session(final Socket controlSocket,
-				final serverSwitch switchboard) throws IOException {
+		public Session(final Socket controlSocket, final serverSwitch switchboard, long penaltyWait) throws IOException {
 			this.identity = "-";
 			this.userAddress = controlSocket.getInetAddress();
 			// String ipname = userAddress.getHostAddress();
@@ -251,6 +262,7 @@ public class serverCore implements Runnable {
 			this.in = new PushbackInputStream(controlSocket.getInputStream());
 			this.out = controlSocket.getOutputStream();
 			this.commandCounter = 0;
+			this.penaltyWait = penaltyWait;
 			// initiate the command class
 			// we pass the input and output stream to the commands,
 			// so that they can take over communication, if needed
@@ -277,8 +289,7 @@ public class serverCore implements Runnable {
 			this.identity = id;
 		}
 
-		public void log(final int level, final boolean outgoing,
-				final String request) {
+		public void log(final int level, final boolean outgoing, final String request) {
 			printlog(level, this.userAddress.getHostAddress() + "/"
 					+ this.identity, "[" + serverCore.this.sessionCounter
 					+ ", " + this.commandCounter
@@ -297,6 +308,9 @@ public class serverCore implements Runnable {
 		public final void run() {
 			serverCore.this.sessionCounter++;
 			try {
+			    if (this.penaltyWait > 0) {
+			        penaltySleep(this.penaltyWait);
+			    }
 				listen();
 			} finally {
 				try {
@@ -315,14 +329,9 @@ public class serverCore implements Runnable {
 			try {
 				// set up some reflection
 				final Class[] stringType = { "".getClass() };
-				final Class[] exceptionType = { Class
-						.forName("java.lang.Throwable") };
-				// System.out.println("commandClass" + ((commandClass == null) ?
-				// "null" : commandClass.toString()));
-				final Method greeting = serverCore.this.commandClass.getMethod(
-						"greeting", (Class[]) null);
-				final Method error = serverCore.this.commandClass.getMethod(
-						"error", exceptionType);
+				final Class[] exceptionType = { Class.forName("java.lang.Throwable") };
+				final Method greeting = serverCore.this.commandClass.getMethod("greeting", (Class[]) null);
+				final Method error = serverCore.this.commandClass.getMethod("error", exceptionType);
 
 				// send greeting
 				Object result = greeting.invoke(this.cmdObject, new Object[0]);
@@ -340,8 +349,7 @@ public class serverCore implements Runnable {
 				String cmd;
 				String tmp;
 				final Object[] stringParameter = new String[1];
-				while ((this.in != null)
-						&& ((requestBytes = readLine()) != null)) {
+				while (this.in != null && (requestBytes = readLine()) != null) {
 					this.commandCounter++;
 					this.request = new String(requestBytes);
 					log(2, false, this.request);
@@ -425,6 +433,52 @@ public class serverCore implements Runnable {
 			}
 		}
 
+        public void wrongLogin() {
+            synchronized (loginAttempts) {
+                Object c = loginAttempts.get(this.userAddress);
+                if (c == null) {
+                    loginAttempts.put(this.userAddress, new Integer(1));
+                    printlog(1, this.userAddress.getHostAddress() + "/", "LOGIN CONTROL: wrong login, set login attempt counter = 1");
+                    return;
+                }
+                int cc = ((Integer) c).intValue() + 1;
+                loginAttempts.put(this.userAddress, new Integer(cc));
+                printlog(1, this.userAddress.getHostAddress() + "/", "LOGIN CONTROL: wrong login, set login attempt counter = " + cc);
+            }
+        }
+        
+        public void successfulLogin() {
+            synchronized (loginAttempts) {
+                Object c = loginAttempts.get(this.userAddress);
+                if (c == null) return;
+                printlog(1, this.userAddress.getHostAddress() + "/", "LOGIN CONTROL: successful login, removed login attempt counter = " + ((Integer) c).intValue());
+                loginAttempts.remove(this.userAddress);
+            }
+        }
+        
+        public void penaltySleep(long sleep) {
+            synchronized (loginIsWaiting) {
+                if (loginIsWaiting.containsKey(this.userAddress)) {
+                    try {
+                        this.controlSocket.close();
+                    } catch (final IOException e) {
+                        System.err.println("ERROR: (internal) " + e);
+                    }
+                    return;
+                }
+                loginIsWaiting.put(this.userAddress, new Long(System.currentTimeMillis()));
+            }
+            try {
+                Thread.sleep(sleep);
+            } catch (InterruptedException e) {}
+            synchronized (loginIsWaiting) {
+                loginIsWaiting.remove(this.userAddress);
+            }
+        }
+        
+        public long penaltyLogin() {
+            return penaltyWait(this.userAddress);
+        }
 	}
 
 	// generic input/output static methods
@@ -507,6 +561,6 @@ public class serverCore implements Runnable {
 			return "<LONG STREAM>";
 		else
 			return new String(buffer);
-	}
+	}	
 
 }

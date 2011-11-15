@@ -1,2 +1,2 @@
 #!/bin/sh
-java -classpath Classes ftpd
+java -cp lib/AnomicFTPD.jar de.anomic.ftpd.ftpd

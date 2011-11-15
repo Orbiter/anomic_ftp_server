@@ -27,6 +27,13 @@ port=2121
 # default is 0 and means 'any available port'
 dataport=0
 
+# the bind ip address for passive (PASV) transmissions:
+# the server socket has normally assigned as the ip address of the servers host,
+# but if the server is addressed using a NAT then the external visible IP is different
+# from the ip of the host. To use an external IP as bind address,
+# set the datahost property to some other value (an IP) than <empty>
+datahost=
+
 # client ip list: connections are allowed only from this list of ip's
 # if any client is allowed to connect, use * as value
 # ip numbers shall be separated by comma. No space allowed.
@@ -97,3 +104,16 @@ charcoding=UTF-8
 # If you have an application that need the subdirectory count,
 # set countsubdir=true
 countsubdir=false
+
+# brute force attack protection:
+# when a client tries to get access using a brute force attack,
+# the server can fight back using a forced response delay
+# the delay can be constructed in the following way:
+# - there is an initial delay after the first wrong log-in attempt (milliseconds)
+loginfailInitialDelay = 500
+# - each next delay from the same client IP gets an add-on delay time
+loginfailAddDelay = 1000
+# - after a maximum number of wrong login attempts the client gets blocked
+#   until next restart of the server
+loginfailMaxAttempts = 20
+
