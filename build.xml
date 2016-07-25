@@ -55,6 +55,7 @@
 
   	<target name="clean">
     	<delete dir="${build}"/>
+	<delete dir="${release}"/>
   	</target>
 	
   	<target name="compile" depends="init" description="compile the source " >
@@ -63,8 +64,13 @@
 	 		<compilerarg line="-target 1.1" />
 	 		<compilerarg line="-source 1.2" />
 	 	</javac>
+		<mkdir dir="${doc}"/>
   		<mkdir dir="${lib}" />
-  		<jar jarfile="${lib}/AnomicFTPD.jar" basedir="${build}"/>
+  		<jar jarfile="${lib}/AnomicFTPD.jar" basedir="${build}">
+			<manifest>
+				<attribute name="Main-Class" value="de.anomic.ftpd.ftpd" />
+			</manifest>
+		</jar>
   	</target>
 
 	<target name="copy" depends="compile">
